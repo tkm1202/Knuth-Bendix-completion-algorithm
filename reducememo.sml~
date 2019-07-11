@@ -1,9 +1,0 @@
-open Reduce;
-val l1 = Read.rdterm "Add(0,y)";
-val r1 = Read.rdterm "y";
-val l2 = Read.rdterm "Add(S(x),y)";
-val r2 = Read.rdterm "S(Add(x,y))";
-val l3 = Read.rdterm "Mul(0,y)";
-val r3 = Read.rdterm "0";
-val l4 = Read.rdterm "Mul(S(x),y)";
-val r4 = Read.rdterm "Add(Mul(x,y),y)";
