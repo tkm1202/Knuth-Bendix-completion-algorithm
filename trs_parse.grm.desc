@@ -1,0 +1,166 @@
+
+state 0:
+
+	dtrs : . term ARROW term 
+	dtrs : . term EQ term 
+	dtrs : . term 
+
+	VSYM	shift 3
+	FSYM	shift 2
+
+	dtrs	goto 14
+	term	goto 1
+
+	.	error
+
+
+state 1:
+
+	dtrs : term . ARROW term 
+	dtrs : term . EQ term 
+	dtrs : term .  (reduce by rule 2)
+
+	EQ	shift 5
+	ARROW	shift 4
+
+
+	.	reduce by rule 2
+
+
+state 2:
+
+	term : FSYM .  (reduce by rule 4)
+	term : FSYM . LPAR terms 
+
+	LPAR	shift 6
+
+
+	.	reduce by rule 4
+
+
+state 3:
+
+	term : VSYM .  (reduce by rule 3)
+
+
+
+	.	reduce by rule 3
+
+
+state 4:
+
+	dtrs : term ARROW . term 
+
+	VSYM	shift 3
+	FSYM	shift 2
+
+	term	goto 7
+
+	.	error
+
+
+state 5:
+
+	dtrs : term EQ . term 
+
+	VSYM	shift 3
+	FSYM	shift 2
+
+	term	goto 8
+
+	.	error
+
+
+state 6:
+
+	term : FSYM LPAR . terms 
+
+	VSYM	shift 3
+	FSYM	shift 2
+
+	term	goto 10
+	terms	goto 9
+
+	.	error
+
+
+state 7:
+
+	dtrs : term ARROW term .  (reduce by rule 0)
+
+
+
+	.	reduce by rule 0
+
+
+state 8:
+
+	dtrs : term EQ term .  (reduce by rule 1)
+
+
+
+	.	reduce by rule 1
+
+
+state 9:
+
+	term : FSYM LPAR terms .  (reduce by rule 5)
+
+
+
+	.	reduce by rule 5
+
+
+state 10:
+
+	terms : term . RPAR 
+	terms : term . COMMA terms 
+
+	COMMA	shift 12
+	RPAR	shift 11
+
+
+	.	error
+
+
+state 11:
+
+	terms : term RPAR .  (reduce by rule 6)
+
+
+
+	.	reduce by rule 6
+
+
+state 12:
+
+	terms : term COMMA . terms 
+
+	VSYM	shift 3
+	FSYM	shift 2
+
+	term	goto 10
+	terms	goto 13
+
+	.	error
+
+
+state 13:
+
+	terms : term COMMA terms .  (reduce by rule 7)
+
+
+
+	.	reduce by rule 7
+
+
+state 14:
+
+
+	EOF	accept
+
+
+	.	error
+
+8 of 31 action table entries left after compaction
+8 goto table entries

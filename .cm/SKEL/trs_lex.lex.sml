@@ -1,0 +1,2 @@
+Skeleton 5
+ae"TRSLexFun"i2aä¢Tokens"gp1c"TRS_TOKENS"f4d"List"ä¢String"d"TextIO"ä¢Vector"h3aä¢UserDeclarations"h1aÿgp1ÿaä¢Internal"h1aä¢StartStates"h0bbbd2bc2egp1ÿegp2ÿ.ÿ<f2ÿÿ.f2ä¢Unsafe"ÿ.f6d"Char"Cÿ2ÿÿ‚.ÿÿ.Næ0ÿƒ

@@ -1,0 +1,47 @@
+(* $Id: trs_parse.grm,v 1.0 2005/01/16 kusakari Exp $
+**
+**  ver 1.0: 2005/01/16 by KUSAKARI Keiichirou
+*)
+
+open TRS;
+
+datatype dTRS = dTerm of Term
+              | dRule of Rule
+              | dEQ of Equation
+
+%%
+%header (functor TRSLrValsFun(structure Token : TOKEN))
+
+%name TRS
+
+%term VSYM of string | FSYM of string |
+      COMMA | LPAR | RPAR |
+      EQ | ARROW |
+      EOF
+
+%nonterm dtrs of dTRS |
+         term of Term |
+         terms of Term list
+
+%pos int
+
+%eop EOF
+
+%noshift EOF
+
+%verbose
+
+%keyword EOF
+
+%%
+
+dtrs: term ARROW term (dRule (term1, term2))
+    | term EQ term    (dEQ (term1, term2))
+    | term            (dTerm term)
+
+term: VSYM            (Node (VSym (VSYM, 0), []))
+    | FSYM            (Node (FSym FSYM, []))
+    | FSYM LPAR terms (Node (FSym FSYM, terms))
+
+terms: term RPAR        ([term])
+     | term COMMA terms (term::terms)

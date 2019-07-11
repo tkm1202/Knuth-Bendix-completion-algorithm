@@ -22,6 +22,7 @@ signature SigReduce = sig
   val postep : RuleSet -> Term -> bool * Term
   val posteplist : bool * (Term list) -> RuleSet -> Pattern list -> bool * (Term list)
 
+									       
   (* Get normal form by Par-Out strategy *)
   val ponf : RuleSet -> Term -> Term
 
@@ -45,14 +46,16 @@ structure Reduce : SigReduce =  struct
   fun subst [] t = t   
     | subst theta t =
       case t of
-	  (Node (VSym v,_)) =>
-	  let
-	      val a = find v theta
-	  in
-	      if isSome a
-	      then valOf a else t
-	  end
-       |  (Node (FSym f, ts)) =>  (Node (FSym f,(map (subst theta) ts)));
+	  (Node (FSym f, [])) => t
+       |  (Node (FSym f, ts))
+	  =>  (Node (FSym f,(map (subst theta) ts)))
+       |  (Node (VSym v,_)) => if isSome (find v theta)
+				   then valOf (find v theta) else t;
+
+
+
+
+
   
   (*match 改定前
   val  match : Pattern -> Term -> bool * Subst 
@@ -89,7 +92,7 @@ structure Reduce : SigReduce =  struct
 *)
    fun match sigma l t =
       case l of  
-	  (Node (VSym v,_)) =>
+	  (Node (VSym v,ls)) =>
 	  let
 	      val tt = find v sigma
 	  in
@@ -101,27 +104,27 @@ structure Reduce : SigReduce =  struct
        |  (Node (f, ls)) =>
 	  (case t of  (Node (FSym g, ts)) =>
 		      if f = (FSym g)
-		      then  matchlist sigma ls ts
+		      then  matchlist [] ls ts
 		      else (false,[])
 		    | (Node (v,ts)) => (false,[]))	      
-  and  matchlist sigma (l::ls) (t::ts) =
+  and matchlist sigma [] [] = (true,sigma)
+    | matchlist sigma [] _ = (false,[])
+    | matchlist sigma _ [] = (false,[])
+    | matchlist sigma (l::ls) (t::ts) =
       let
 	  val (bool,vs) = match sigma l t 
       in
 	 if bool then matchlist vs ls ts else (false,[]) 
-      end
-     | matchlist sigma [] [] = (true,sigma)
-     | matchlist sigma [] _ = (false,[])
-     | matchlist sigma _ [] = (false,[]);
-				
-  fun rewrite ((l,r)::rs) t =
+      end;
+   
+  fun rewrite [] t = (false,t)
+    | rewrite ((l,r)::rs) t =
       let
 	  val (bool,theta) = match [] l t
       in
 	  if bool then (true,(subst theta r))
 	  else rewrite rs t
-      end
-    | rewrite [] t = (false,t);
+      end;
 (*
   fun linf [] t = t
     | linf rs t =
@@ -134,28 +137,31 @@ structure Reduce : SigReduce =  struct
 		     if bool then linf rs tt  else u
 		 end;
 *)
-  fun linf rs t =
+   fun linf [] t = t
+    | linf ((l,r)::rs) t =
       case t of (Node(VSym v,_)) => t
-	     |  (Node (f, ls)) =>
-		let
-		    val u = (Node (f, (map (linf rs) ls)))
-		    fun linftop [] t = t					   
-		      | linftop ((l,r)::rs) t =
-			let val  (bool,theta) = match [] l t
-			in
-			    if bool then lisubst theta r else linftop rs t
-			end
-		    and lisubst theta t =
-			case t of (Node(VSym v,_)) => subst theta t
-				| (Node(f,ts))
-				  => linftop rs (Node(f,(map (lisubst theta) ts))) 
-		in linftop rs u		    
-		end;
-  
+	      |  (Node (f, ls)) =>
+		 let
+		     val u = (Node (f, (map (linf ((l,r)::rs)) ls)))
+		     fun linftop [] t = t					   
+		       | linftop ((l,r)::rs) t =
+			 let val  (bool,theta) = match [] l t
+			 in
+			     if bool then lisubst theta r else linftop rs t
+			 end
+		     and lisubst theta t =
+			 case t of (Node(VSym v,_)) => subst theta t
+				 | (Node(f,ts))
+				   => linftop ((l,r)::rs) (Node(f,(map (lisubst theta) ts))) 
+		 in linftop ((l,r)::rs) u		    
+		 end;
+   
   exception Empty
 		
-  fun postep rs t =
-      case t of (Node (FSym f,ts)) => 
+  fun postep [] t = (false,t)
+    | postep rs t =
+      case t of (Node(VSym v,_)) => (false,t)
+	     |  (Node (f, ts)) => 
       let
 	  val (bool,tt) = rewrite rs t
       in
@@ -164,25 +170,13 @@ structure Reduce : SigReduce =  struct
 	      let
 		  val (bool,tss) = (posteplist (false,[]) rs ts)
 	      in
-		  (if bool then  (true,(Node (FSym f,tss)))
+		  (if bool then  (true,(Node (f,tss)))
 		   else (false,t))
 	      end
       end
-	      | _ => (false,t)
-  and posteplist (bool,Tlist) rs (t::ts) =
-      let
-	  val (bool2,tt2) = postep rs t
-      in
-	  case bool of false =>
-		       if bool2 then posteplist (true,(tt2::Tlist)) rs ts
-		       else posteplist (false,(t::Tlist)) rs ts
-		     | true =>
-		       posteplist (true,(tt2::Tlist)) rs ts
-      end
-    | posteplist (bool,[]) rs [] = (bool,[])
-    | posteplist (bool,Tlist) rs [] = (bool,(rev Tlist));
-(*	     
-  and posteplist (bool,Tlist) rs (t::ts) =
+  and posteplist (bool,[]) rs [] = (bool,[])
+    | posteplist (bool,Tlist) rs [] = (bool,Tlist)
+    | posteplist (bool,Tlist) rs (t::ts) =
       let
 	  val (bool2,tt2) = postep rs t
       in
@@ -191,11 +185,10 @@ structure Reduce : SigReduce =  struct
 		       else posteplist (false,(Tlist @ [t])) rs ts
 		     | true =>
 		       posteplist (true,(Tlist @ [tt2])) rs ts
-      end
-    | posteplist (bool,[]) rs [] = (bool,[])
-    | posteplist (bool,Tlist) rs [] = (bool,Tlist);
-*)					  
-  fun ponf rs t =
+      end;
+  
+  fun ponf [] t = t
+    | ponf rs t =
       case t of (Node(VSym v,_)) => t
 	     |  (Node (f, ls)) =>
 		let
@@ -205,32 +198,33 @@ structure Reduce : SigReduce =  struct
 		end;
 
 
-  fun lostep rs t =
-      case t of (Node (FSym f, ts)) => 
-		let
-		    val (bool,tt) = rewrite rs t
-		in
-		    if bool then (true,tt)
-		    else (true,(Node (FSym f, (losteplist rs ts))))
-			 handle Empty => (false,t)
-		end
-	      | _ => (false,t)
-	    		 
-  and losteplist rs (t::ts) = 
+  fun lostep [] t = (false,t)
+    | lostep rs t =
+      case t of (Node(VSym v,_)) => (false,t)
+	     |  (Node (f, ts)) => 
+      let
+	  val (bool,tt) = rewrite rs t
+      in
+	  if bool then (true,tt)
+	  else (true,(Node (f, (losteplist rs ts))))
+	       handle Empty => (false,t)
+      end	
+  and losteplist rs [] = raise Empty
+    | losteplist rs (t::ts) = 
       let
 	  val (bool2,tt2) = lostep rs t
       in
 	  if bool2 then (tt2::ts) else (t::losteplist rs ts)
-      end
-    | losteplist rs [] = raise Empty;
+      end;
 
-  fun  lonf rs t =
-       case t of (Node (FSym f,fs)) =>
+fun lonf [] t = t
+  | lonf rs t =
+     case t of (Node(VSym v,_)) => t
+	      |  (Node (f, ls)) =>
 		 let
 		     val (bool,tt) = lostep rs t
 		 in
 		     if bool then lonf rs tt else t
-		 end
-	       | _ => t;
-  
+		 end;
+
 end;

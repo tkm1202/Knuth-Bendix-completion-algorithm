@@ -1,0 +1,2 @@
+Skeleton 5
+ae"TRSLrValsFun"i2aä¢Token"gp1c"TOKEN"f±ÿh2ad"ParserData"h7aä¢Header"h1egp1d"TRS"aä¢LrTable"gp2ÿÿCaÿgpÿ'båçğ±ÿf6d"Char"Cd"List"d"String"d"General"ÿd"Array"Nbåçğ±ÿ=aä¢MlyValue"è0ad"EC"h2ÿ.bÿ‚&æ±ÿ‚-ad"Actions"h2bÿ‚&f2ÿÿ‚-ÿƒ	Nad"Tokens"jÿ‚8gp1c"TRS_TOKENS"

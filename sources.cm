@@ -1,0 +1,22 @@
+(* $Id: souces.cm,v 1.0 2007/03/05 nishida Exp $
+**
+**  ver 1.0: 2007/03/05 by NISHIDA Naoki
+**
+*)
+Group is
+      ml-yacc-lib.cm
+      util.sml
+      trs_sig.sml
+      trs_parse.grm.sig
+      trs_parse.grm.sml
+      trs_lex.lex.sml
+      read.sml
+      pprint.sml
+      reduce.sml
+      rename.sml
+      unify.sml
+      cpair.sml
+      order.sml
+      kb.sml
+      contest-trs.sml
+      contest-kb.sml

@@ -4,7 +4,6 @@
 **  ver 1.1: 1998/07/21 by KUSAKARI Keiichirou
 **  ver 1.2: 2000/09/18 by KUSAKARI Keiichirou
 **  ver 1.3: 2007/05/15 by NISHIDA Naoki
-2019/5/17
 *)
 
 signature SigReduce = sig
@@ -15,12 +14,13 @@ signature SigReduce = sig
 
   val match : Subst -> Pattern -> Term -> bool * Subst
   val matchlist : Subst -> Pattern list -> Term list -> bool * Subst
-
-  val rewrite : RuleSet -> Term -> bool * Term
+  val redex : RuleSet -> Symbol list
+  val rewrite : Symbol list -> RuleSet -> Term -> bool * Term
 
   (* Par-Out one-step reduction *)
   val postep : RuleSet -> Term -> bool * Term
-  val posteplist : bool * (Term list) -> RuleSet -> Pattern list -> bool * (Term list)
+  val posteplist : Pattern list -> RuleSet -> Pattern list -> Pattern list
+
 
   (* Get normal form by Par-Out strategy *)
   val ponf : RuleSet -> Term -> Term
@@ -43,17 +43,13 @@ structure Reduce : SigReduce =  struct
   open TRS;
 
   fun subst [] t = t   
-    | subst theta t =
+    | subst a t =
       case t of
-	  (Node (VSym v,_)) =>
-	  let
-	      val a = find v theta
-	  in
-	      if isSome a
-	      then valOf a else t
-	  end
-       |  (Node (FSym f, ts)) =>  (Node (FSym f,(map (subst theta) ts)));
-  
+	  (Node (FSym f, [])) => t
+       |  (Node (FSym f, ts)) =>  (Node (FSym f,(map (fn x => (subst a x)) ts)))
+       |  (Node (VSym v,_)) => if isSome (find v a)
+				   then valOf (find v a) else t;
+
   (*match 改定前
   val  match : Pattern -> Term -> bool * Subst 
 *)
@@ -89,40 +85,45 @@ structure Reduce : SigReduce =  struct
 *)
    fun match sigma l t =
       case l of  
-	  (Node (VSym v,_)) =>
-	  let
-	      val tt = find v sigma
-	  in
-	  if  (isSome tt) then
-	      (if ((valOf tt) = t) then (true,sigma)
+	  (Node (VSym v,ls)) =>
+	  if  (isSome (find v sigma)) then
+	      (if ((valOf (find v sigma)) = t) then (true,sigma)
 	       else (false,[]))
 	  else (true,((v,t)::sigma))
-	  end
        |  (Node (f, ls)) =>
 	  (case t of  (Node (FSym g, ts)) =>
 		      if f = (FSym g)
-		      then  matchlist sigma ls ts
+		      then  matchlist [] ls ts
 		      else (false,[])
 		    | (Node (v,ts)) => (false,[]))	      
-  and  matchlist sigma (l::ls) (t::ts) =
+  and matchlist sigma [] [] = (true,sigma)
+    | matchlist sigma [] _ = (false,[])
+    | matchlist sigma _ [] = (false,[])
+    | matchlist sigma (l::ls) (t::ts) =
       let
 	  val (bool,vs) = match sigma l t 
       in
 	 if bool then matchlist vs ls ts else (false,[]) 
-      end
-     | matchlist sigma [] [] = (true,sigma)
-     | matchlist sigma [] _ = (false,[])
-     | matchlist sigma _ [] = (false,[]);
-				
-  fun rewrite ((l,r)::rs) t =
-      let
-	  val (bool,theta) = match [] l t
-      in
-	  if bool then (true,(subst theta r))
-	  else rewrite rs t
-      end
-    | rewrite [] t = (false,t);
-(*
+      end;
+
+   fun redex [] = []
+     | redex ((l,r)::rs) =
+       case l of  (Node (FSym f, ts)) => union [FSym f] (redex rs)
+		| _ => []
+			   
+  fun rewrite redexes [] t = (false,t)
+    | rewrite redexes rs (Node (VSym v,vs)) = (false,(Node (VSym v,vs))) 
+    | rewrite redexes ((l,r)::rs) (Node (f,ts)) =
+      if member f redexes
+      then
+	 ( let
+	      val (bool,theta) = match [] l (Node (f,ts))
+	  in
+	      if bool then (true,(subst theta r))
+	      else rewrite redexes rs (Node (f,ts))
+	  end)
+      else (false,(Node (f,ts)));
+				   (*
   fun linf [] t = t
     | linf rs t =
       case t of (Node(VSym v,_)) => t
@@ -134,68 +135,52 @@ structure Reduce : SigReduce =  struct
 		     if bool then linf rs tt  else u
 		 end;
 *)
-  fun linf rs t =
+   fun linf [] t = t
+    | linf ((l,r)::rs) t =
       case t of (Node(VSym v,_)) => t
-	     |  (Node (f, ls)) =>
-		let
-		    val u = (Node (f, (map (linf rs) ls)))
-		    fun linftop [] t = t					   
-		      | linftop ((l,r)::rs) t =
-			let val  (bool,theta) = match [] l t
-			in
-			    if bool then lisubst theta r else linftop rs t
-			end
-		    and lisubst theta t =
-			case t of (Node(VSym v,_)) => subst theta t
-				| (Node(f,ts))
-				  => linftop rs (Node(f,(map (lisubst theta) ts))) 
-		in linftop rs u		    
-		end;
-  
+	      |  (Node (f, ls)) =>
+		 let
+		     val u = (Node (f, (map (linf ((l,r)::rs)) ls)))
+		     fun linftop [] t = t					   
+		       | linftop ((l,r)::rs) t =
+			 let val  (bool,theta) = match [] l t
+			 in
+			     if bool then lisubst theta r else linftop rs t
+			 end
+		     and lisubst theta t =
+			 case t of (Node(VSym v,_)) => subst theta t
+				 | (Node(f,ts))
+				   => linftop ((l,r)::rs) (Node(f,(map (lisubst theta) ts))) 
+		 in linftop ((l,r)::rs) u		    
+		 end;
+   
   exception Empty
 		
-  fun postep rs t =
-      case t of (Node (FSym f,ts)) => 
+  fun postep [] t = (false,t)
+    | postep rs t =
+      let val re = redex rs in
+      case t of (Node(VSym v,_)) => (false,t)
+	     |  (Node (f, ts)) => 
       let
-	  val (bool,tt) = rewrite rs t
+	  val (bool,tt) = rewrite (redex rs) rs t
       in
 	  if bool then (true,tt)
-	  else
-	      let
-		  val (bool,tss) = (posteplist (false,[]) rs ts)
-	      in
-		  (if bool then  (true,(Node (FSym f,tss)))
-		   else (false,t))
-	      end
+	  else (true,(Node (f,(posteplist [] rs ts))))
+	       handle Empty => (false,t)
       end
-	      | _ => (false,t)
-  and posteplist (bool,Tlist) rs (t::ts) =
+      end
+  and posteplist [] rs [] = raise Empty
+    | posteplist Tlist rs [] = Tlist
+    | posteplist Tlist rs (t::ts) =
       let
 	  val (bool2,tt2) = postep rs t
       in
-	  case bool of false =>
-		       if bool2 then posteplist (true,(tt2::Tlist)) rs ts
-		       else posteplist (false,(t::Tlist)) rs ts
-		     | true =>
-		       posteplist (true,(tt2::Tlist)) rs ts
-      end
-    | posteplist (bool,[]) rs [] = (bool,[])
-    | posteplist (bool,Tlist) rs [] = (bool,(rev Tlist));
-(*	     
-  and posteplist (bool,Tlist) rs (t::ts) =
-      let
-	  val (bool2,tt2) = postep rs t
-      in
-	  case bool of false =>
-		       if bool2 then posteplist (true,(Tlist @ [tt2])) rs ts
-		       else posteplist (false,(Tlist @ [t])) rs ts
-		     | true =>
-		       posteplist (true,(Tlist @ [tt2])) rs ts
-      end
-    | posteplist (bool,[]) rs [] = (bool,[])
-    | posteplist (bool,Tlist) rs [] = (bool,Tlist);
-*)					  
-  fun ponf rs t =
+	  if bool2 then posteplist (tt2::Tlist) rs ts
+	  else posteplist Tlist rs ts
+      end;
+	  
+  fun ponf [] t = t
+    | ponf rs t =
       case t of (Node(VSym v,_)) => t
 	     |  (Node (f, ls)) =>
 		let
@@ -205,32 +190,36 @@ structure Reduce : SigReduce =  struct
 		end;
 
 
-  fun lostep rs t =
-      case t of (Node (FSym f, ts)) => 
-		let
-		    val (bool,tt) = rewrite rs t
-		in
-		    if bool then (true,tt)
-		    else (true,(Node (FSym f, (losteplist rs ts))))
-			 handle Empty => (false,t)
-		end
-	      | _ => (false,t)
-	    		 
-  and losteplist rs (t::ts) = 
+  fun lostep [] t = (false,t)
+    | lostep rs t =
+      let val re = redex rs in
+      case t of (Node(VSym v,_)) => (false,t)
+	     |  (Node (f, ts)) => 
+      let
+	  val (bool,tt) = rewrite re rs t
+      in
+	  if bool then (true,tt)
+	  else (true,(Node (f, (losteplist rs ts))))
+	       handle Empty => (false,t)
+      end
+      end
+	
+  and losteplist rs [] = raise Empty
+    | losteplist rs (t::ts) = 
       let
 	  val (bool2,tt2) = lostep rs t
       in
 	  if bool2 then (tt2::ts) else (t::losteplist rs ts)
-      end
-    | losteplist rs [] = raise Empty;
+      end;
 
-  fun  lonf rs t =
-       case t of (Node (FSym f,fs)) =>
+fun lonf [] t = t
+  | lonf rs t =
+     case t of (Node(VSym v,_)) => t
+	      |  (Node (f, ls)) =>
 		 let
 		     val (bool,tt) = lostep rs t
 		 in
 		     if bool then lonf rs tt else t
-		 end
-	       | _ => t;
-  
+		 end;
+
 end;

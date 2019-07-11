@@ -1,0 +1,2 @@
+Skeleton 5
+d3f3d"TRS"d"String"d"TextIO"aã¢SigRead"h0ad"Read"jh3aä¢TRSLrVals"jh1aä¢Token"gp2ä¢LrParser"ÿgp1e"TRSLrValsFun"aä¢TRSLex"jh1aä¢Tokens"gp2ÿ5ÿ>gp1e"TRSLexFun"ad"TRSParser"jh3aä¢ParserData"gp2ÿ5ÿ‚/ad"Lex"gp1ÿ1aÿgp1ÿgp1e"Join"gp1ÿ

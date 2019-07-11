@@ -1,0 +1,59 @@
+use "load.sml";
+Control.Print.printDepth := 30;
+open TRS;
+val l1 = Node (FSym "Add",[Node (FSym "0",[]),Node (VSym ("y",0),[])]);
+val l2 =
+Node
+    (FSym "Add",
+     [Node (FSym "S",[Node (VSym ("x",0),[])]),Node (VSym ("y",0),[])]);
+
+val l3 = Node (FSym "Mul",[Node (FSym "0",[]),Node (VSym ("y",0),[])]);
+val l4 =
+  Node
+    (FSym "Mul",
+     [Node (FSym "S",[Node (VSym ("x",0),[])]),Node (VSym ("y",0),[])]);
+
+val r1 = Node (VSym ("y",0),[]);
+val r2 =
+  Node
+    (FSym "S",
+     [Node (FSym "Add",[Node (VSym ("x",0),[]),Node (VSym ("y",0),[])])]);
+
+val r3 = Node (FSym "0",[]);
+val r4 =
+  Node
+    (FSym "Add",
+     [Node (FSym "Mul",[Node (VSym ("x",0),[]),Node (VSym ("y",0),[])]),
+      Node (VSym ("y",0),[])]);
+
+val rs =   [(Node (FSym "Add",[Node (FSym "0",[]),Node (VSym ("y",0),[])]),
+    Node (VSym ("y",0),[])),
+   (Node
+      (FSym "Add",
+       [Node (FSym "S",[Node (VSym ("x",0),[])]),Node (VSym ("y",0),[])]),
+    Node
+      (FSym "S",
+       [Node (FSym "Add",[Node (VSym ("x",0),[]),Node (VSym ("y",0),[])])])),
+   (Node (FSym "Mul",[Node (FSym "0",[]),Node (VSym ("y",0),[])]),
+    Node (FSym "0",[])),
+   (Node
+      (FSym "Mul",
+       [Node (FSym "S",[Node (VSym ("x",0),[])]),Node (VSym ("y",0),[])]),
+    Node
+      (FSym "Add",
+       [Node (FSym "Mul",[Node (VSym ("x",0),[]),Node (VSym ("y",0),[])]),
+        Node (VSym ("y",0),[])]))];
+
+val s1 =
+  Node
+    (FSym "Mul",
+     [Node (FSym "S",[Node (FSym "0",[])]),
+      Node
+        (FSym "Add",[Node (FSym "0",[]),Node (FSym "S",[Node (FSym "0",[])])])]);
+
+val (r1,r2) = Rename.uniquevar (Read.rdrule "F(x,y) -> x", Read.rdrule "G(x,y) -> H(y,x)");
+(PPrint.prrule r1; print "\n"; PPrint.prrule r2; print "\n";)
+open PPrint;
+open Reduce;
+
+
